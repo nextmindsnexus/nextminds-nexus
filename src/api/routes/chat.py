@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
+from google.genai.errors import ClientError
 
 from src.api.models import ChatRequest, ChatResponse, ActivityResult
 from src.api.chat_engine import chat, clear_session
@@ -21,6 +23,15 @@ async def api_chat(req: ChatRequest):
             message=req.message,
             session_id=req.session_id,
         )
+    except ClientError as e:
+        if e.code == 429:
+            raise HTTPException(
+                status_code=429,
+                detail="Gemini API rate limit reached. Please wait a moment and try again.",
+                headers={"Retry-After": "60"},
+            )
+        logger.exception("Gemini API error")
+        raise HTTPException(status_code=502, detail=f"Gemini API error: {e}")
     except RuntimeError as e:
         # Missing API key, config errors
         raise HTTPException(status_code=503, detail=str(e))

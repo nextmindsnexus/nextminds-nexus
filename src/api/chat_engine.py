@@ -118,7 +118,7 @@ def chat(message: str, session_id: str | None = None) -> tuple[str, str, list[di
 
     # Call Gemini with tools
     response = client.models.generate_content(
-        model="gemini-2.0-flash",
+        model="gemini-2.5-flash",
         contents=history,
         config=types.GenerateContentConfig(
             system_instruction=SYSTEM_INSTRUCTION,
@@ -175,7 +175,7 @@ def chat(message: str, session_id: str | None = None) -> tuple[str, str, list[di
         history.append(types.Content(role="user", parts=function_responses))
 
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-2.5-flash",
             contents=history,
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_INSTRUCTION,
