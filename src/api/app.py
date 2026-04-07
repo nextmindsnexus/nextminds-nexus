@@ -31,22 +31,12 @@ try:
     logging.info("Routes imported successfully")
 except Exception as e:
     logging.exception("Failed to import routes")
+    print("=== FastAPI app is starting up ===")
+    print("=== FastAPI app is starting up ===")
     raise
 
 app = FastAPI(
     title="CTIC Curriculum Engine API",
-    description="Conversational recommendation engine for CTIC curriculum activities. "
-                "Helps teachers discover and share invention-based learning resources.",
-    version="0.2.0",
-)
-
-# CORS — allow the React frontend (adjust origins for production)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
