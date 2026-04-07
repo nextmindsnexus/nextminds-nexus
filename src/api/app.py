@@ -31,8 +31,6 @@ try:
     logging.info("Routes imported successfully")
 except Exception as e:
     logging.exception("Failed to import routes")
-    print("=== FastAPI app is starting up ===")
-    print("=== FastAPI app is starting up ===")
     raise
 
 app = FastAPI(
