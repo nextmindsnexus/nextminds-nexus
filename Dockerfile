@@ -6,7 +6,7 @@ WORKDIR /app
 
 RUN pip install poetry
 RUN poetry config virtualenvs.in-project true
-COPY pyproject.toml poetry.lock ./
+COPY pyproject.toml poetry.lock README.md ./
 RUN poetry install
 FROM python:3.11-slim
 WORKDIR /app

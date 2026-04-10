@@ -1,5 +1,6 @@
 [tool.poetry]
 name = "ctic-curriculum-engine"
+package-mode = false
 version = "0.1.0"
 description = "CTIC Curriculum Recommendation Engine - Data Pipeline"
 authors = ["Your Name <you@example.com>"]

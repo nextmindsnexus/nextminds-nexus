@@ -33,8 +33,18 @@ except Exception as e:
     logging.exception("Failed to import routes")
     raise
 
+
 app = FastAPI(
     title="CTIC Curriculum Engine API",
+)
+
+# CORS setup for frontend on Render and local dev
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://nextminds-nexus-frontend.onrender.com",
+        "http://localhost:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
