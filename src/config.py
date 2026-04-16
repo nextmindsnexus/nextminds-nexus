@@ -33,3 +33,6 @@ GOOGLE_SERVICE_ACCOUNT_KEY = os.getenv("GOOGLE_SERVICE_ACCOUNT_KEY", "")
 
 # Gemini API (Part 2 — chat engine)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+
+# Summarization model (defaults to same model as chat)
+SUMMARIZER_MODEL = os.getenv("SUMMARIZER_MODEL", "gemini-2.5-flash")

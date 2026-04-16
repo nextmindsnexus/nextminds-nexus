@@ -6,7 +6,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException
 
-from src.api.models import IngestResponse, StatsResponse, HealthResponse
+from src.api.models import IngestResponse, StatsResponse, HealthResponse, SummarizeResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -86,4 +86,22 @@ async def api_health():
         status=overall,
         database=db_status,
         embedding_model=model_status,
+    )
+
+
+@router.post("/summarize", response_model=SummarizeResponse)
+async def api_summarize(limit: int | None = None):
+    """Trigger summarization for unsummarized activities."""
+    try:
+        from src.summarizer.summarizer import run_summarization
+        result = run_summarization(limit=limit)
+    except Exception as e:
+        logger.exception("Summarization failed")
+        raise HTTPException(status_code=500, detail=f"Summarization failed: {e}")
+
+    return SummarizeResponse(
+        status="completed",
+        processed=result.get("processed", 0),
+        skipped=result.get("skipped", 0),
+        errors=result.get("errors", 0),
     )

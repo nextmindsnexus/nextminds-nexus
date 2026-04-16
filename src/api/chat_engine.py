@@ -24,10 +24,10 @@ logger = logging.getLogger(__name__)
 # In-memory session store (swap for Redis in production)
 _sessions: dict[str, list[types.Content]] = defaultdict(list)
 
-SYSTEM_INSTRUCTION = """You are the CTIC Curriculum Assistant, helping Connecticut teachers discover \
+SYSTEM_INSTRUCTION = """You are the NextMinds Curriculum Assistant, helping Connecticut teachers discover \
 invention-based curriculum activities for their classrooms.
 
-You have access to a search tool that queries a database of CTIC curriculum activities. \
+You have access to a search tool that queries a database of NextMinds curriculum activities. \
 Each activity belongs to a grade band (K-2, 3-5, 6-8, 9-12) and an invention stage \
 (Introduction to Inventing, Identifying & Ideating, Understanding, Engineering Design, \
 Communication, Entrepreneurship).
@@ -35,17 +35,17 @@ Communication, Entrepreneurship).
 When a teacher asks for activities:
 1. Use the search_curriculum tool with an appropriate query and any filters they mention.
 2. Present results clearly: activity name, grade band, stage, and a clickable link.
-3. If no results match, suggest broadening the search (different grade or stage).
+3. If no results match, suggest broadening the search (different stage).
 4. Be concise, warm, and teacher-focused.
 
-Never invent activities that aren't in the search results. Always cite the resource URL."""
+Never invent activities that aren't in the search results. Always cite the resource URL as a clickable link."""
 
 # Define the function tool for Gemini
 SEARCH_TOOL = types.Tool(
     function_declarations=[
         types.FunctionDeclaration(
             name="search_curriculum",
-            description="Search the CTIC curriculum database for activities matching a query. "
+            description="Search the NextMinds curriculum database for activities matching a query. "
                         "Returns ranked results with activity names, grade bands, stages, and resource URLs.",
             parameters=types.Schema(
                 type="OBJECT",

@@ -269,6 +269,47 @@ def get_activity_stats() -> dict:
     return stats
 
 
+def get_unsummarized_activities(limit: int | None = None) -> list[dict]:
+    """Get active activities that don't have a summary yet."""
+    query = """
+        SELECT id, activity_name, grade_band, stage,
+               resource_url, resource_type, drive_id,
+               section_description
+        FROM activities
+        WHERE description IS NULL AND is_active = TRUE
+        ORDER BY created_at
+    """
+    params: dict = {}
+    if limit:
+        query += " LIMIT %(limit)s"
+        params["limit"] = limit
+
+    with get_connection() as conn:
+        result = conn.execute(query, params)
+        columns = [desc.name for desc in result.description]
+        return [dict(zip(columns, row)) for row in result.fetchall()]
+
+
+def update_activity_summary(
+    activity_id: str,
+    description: str,
+    keywords: list[str] | None = None,
+):
+    """Update the summary and keywords for a single activity."""
+    with get_connection() as conn:
+        conn.execute(
+            """
+            UPDATE activities SET
+                description = %(desc)s,
+                keywords = COALESCE(%(kw)s, keywords),
+                updated_at = NOW()
+            WHERE id = %(id)s
+            """,
+            {"id": activity_id, "desc": description, "kw": keywords},
+        )
+        conn.commit()
+
+
 def update_health_status(resource_url: str, is_accessible: bool):
     """Update the health check timestamp and active status for an activity."""
     with get_connection() as conn:

@@ -35,7 +35,10 @@ except Exception as e:
 
 
 app = FastAPI(
-    title="CTIC Curriculum Engine API",
+    title="Nexus Curriculum Engine API",
+    description="Conversational recommendation engine for NextMinds curriculum activities. "
+                "Helps teachers discover and share invention-based learning resources.",
+    version="0.2.0",
 )
 
 # CORS setup for frontend on Render and local dev
@@ -64,7 +67,7 @@ except Exception as e:
 @app.get("/")
 async def root():
     return {
-        "name": "CTIC Curriculum Engine API",
+        "name": "Nexus Curriculum Engine API",
         "version": "0.2.0",
         "docs": "/docs",
         "endpoints": {

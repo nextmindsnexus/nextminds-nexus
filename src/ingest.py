@@ -30,6 +30,7 @@ from src.db.operations import (
     get_activity_stats,
     update_health_status,
 )
+from src.summarizer.summarizer import run_summarization
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -137,6 +138,17 @@ def run_full_ingestion(triggered_by: str = "manual") -> dict:
         console.print("\n[yellow]Errors:[/yellow]")
         for e in errors:
             console.print(f"  [red]• {e}[/red]")
+
+    # Step 6: Summarize new activities (description IS NULL)
+    console.print("\n[dim]Step 6:[/dim] Summarizing new activities...")
+    try:
+        sum_result = run_summarization()
+        summary["summarized"] = sum_result.get("processed", 0)
+        summary["summary_errors"] = sum_result.get("errors", 0)
+    except Exception as e:
+        logger.warning(f"Summarization step failed: {e}")
+        summary["summarized"] = 0
+        summary["summary_errors"] = 1
 
     return summary
 

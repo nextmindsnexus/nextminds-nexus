@@ -178,6 +178,14 @@ def cmd_init_db(args):
     console.print("[green]Database schema initialized successfully.[/green]")
 
 
+def cmd_summarize(args):
+    """Summarize unsummarized activities using Gemini."""
+    from src.summarizer.summarizer import run_summarization
+
+    limit = getattr(args, "limit", None)
+    run_summarization(limit=limit)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="CTIC Curriculum Engine - Data Pipeline CLI",
@@ -210,6 +218,10 @@ def main():
     # init-db
     subparsers.add_parser("init-db", help="Initialize database schema")
 
+    # summarize
+    summarize_parser = subparsers.add_parser("summarize", help="Summarize unsummarized activities")
+    summarize_parser.add_argument("--limit", "-l", type=int, default=None, help="Max activities to summarize")
+
     args = parser.parse_args()
     setup_logging(args.verbose)
 
@@ -224,6 +236,7 @@ def main():
         "search": cmd_search,
         "stats": cmd_stats,
         "init-db": cmd_init_db,
+        "summarize": cmd_summarize,
     }
 
     try:

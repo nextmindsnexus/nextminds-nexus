@@ -75,3 +75,10 @@ class HealthResponse(BaseModel):
     status: str
     database: str
     embedding_model: str
+
+
+class SummarizeResponse(BaseModel):
+    status: str
+    processed: int = 0
+    skipped: int = 0
+    errors: int = 0
