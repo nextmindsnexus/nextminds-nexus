@@ -158,9 +158,12 @@ class TestRunHealthCheck:
         assert mock_update.call_count == 2
 
     @patch("src.ingest.get_connection")
-    def test_no_links_to_check(self, mock_gc):
+    @patch("src.db.operations.get_connection")
+    def test_no_links_to_check(self, mock_gc_db, mock_gc_ingest):
         mock_conn = MagicMock()
-        mock_gc.return_value = mock_conn_cm(mock_conn)
+        mock_cm = mock_conn_cm(mock_conn)
+        mock_gc_db.return_value = mock_cm
+        mock_gc_ingest.return_value = mock_cm
 
         mock_result = MagicMock()
         mock_result.fetchall.return_value = []

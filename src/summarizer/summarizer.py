@@ -124,8 +124,8 @@ def run_summarization(limit: int | None = None) -> dict:
     from rich.console import Console
     from rich.progress import Progress
 
-    from src.db.operations import get_unsummarized_activities, update_activity_summary
-    from src.summarizer.content_extractor import extract_content
+    from src.db.operations import get_unsummarized_activities, update_activity_summary, get_content_hash, update_content_hash
+    from src.summarizer.content_extractor import extract_content_with_hash, compute_content_hash
 
     console = Console()
     console.print("\n[bold blue]Document Summarization Pipeline[/bold blue]\n")
@@ -155,14 +155,15 @@ def run_summarization(limit: int | None = None) -> dict:
             progress.update(task, description=f"[dim]{name[:40]}[/dim]")
 
             try:
-                # Step 1: Extract content from Drive
-                content = extract_content(url, rtype, drive_id)
+                # Step 1: Extract content from Drive (with hash)
+                content, new_hash = extract_content_with_hash(url, rtype, drive_id)
 
                 # Step 1b: Fall back to website section description
                 if not content or len(content.strip()) < 20:
                     section_desc = activity.get("section_description") or ""
                     if section_desc.strip():
                         content = section_desc
+                        new_hash = compute_content_hash(content)
 
                 if not content or len(content.strip()) < 20:
                     # No content available — generate a basic summary from metadata
@@ -172,6 +173,15 @@ def run_summarization(limit: int | None = None) -> dict:
                         f"Stage: {activity['stage']}. "
                         f"Resource type: {rtype}."
                     )
+                    new_hash = compute_content_hash(content)
+
+                # Step 1c: Check if content has changed (skip if hash matches)
+                if new_hash and activity.get("description"):
+                    old_hash = get_content_hash(str(aid))
+                    if old_hash and old_hash == new_hash:
+                        skipped += 1
+                        progress.advance(task)
+                        continue
 
                 # Step 2: Summarize with Gemini
                 summary, keywords = summarize_text(
@@ -187,6 +197,11 @@ def run_summarization(limit: int | None = None) -> dict:
                     description=summary,
                     keywords=keywords if keywords else None,
                 )
+
+                # Step 4: Update content hash
+                if new_hash:
+                    update_content_hash(str(aid), new_hash)
+
                 processed += 1
 
                 # Rate limit: ~2 seconds between calls (safe for free tier)

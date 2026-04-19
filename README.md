@@ -221,10 +221,11 @@ curl -X POST http://localhost:8000/api/chat \
   -d '{"message": "Show me something for older kids instead", "session_id": "YOUR_SESSION_ID"}'
 ```
 
-**Catalog stats:**
+**Testing the Full Suite:**
 ```bash
-curl http://localhost:8000/api/admin/stats
+poetry run pytest tests/
 ```
+Includes custom API requests testing and mock testing for backend data processes.
 
 **Health check:**
 ```bash
@@ -245,7 +246,9 @@ curl -X POST http://localhost:8000/api/admin/ingest
 | `DELETE` | `/api/chat/{session_id}` | Clear chat history | None |
 | `GET` | `/api/admin/stats` | Catalog statistics | None |
 | `GET` | `/api/admin/health` | System health check | None |
-| `POST` | `/api/admin/ingest` | Trigger re-crawl + ingestion | None |
+| `POST` | `/api/admin/ingest` | Trigger re-crawl + auto-summarize pipeline | Admin |
+
+**Automation Note:** A background `apscheduler` process also runs inside `app.py` upon startup, automatically triggering the full re-crawl and summarize pipeline exactly at midnight on the 1st of every month without requiring manual intervention.
 
 ### Project Structure (updated)
 
@@ -277,9 +280,11 @@ src/
 | SDK | google-genai |
 | Validation | Pydantic v2 |
 
-### What's Next
+### What's Next (Part 3: Frontend completed!)
 
-**Part 3: Frontend** will add:
-- React chat interface
-- Google Classroom Share buttons on each result
-- Admin dashboard
+**Part 3: Frontend** is now active and provides:
+- A polished React AI chat interface with a glassmorphism authentication UI.
+- Secure Role-Based Access Control (Admin, Teacher, User).
+- Admin Dashboard to view platform stats and manage teacher access.
+- Fully automated Background Jobs: One-click "Run Re-crawl" updates both content and summaries, and a built-in `apscheduler` runs this pipeline automatically on the 1st of every month!
+- Comprehensive API and Ingestion testing via `pytest`.

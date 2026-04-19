@@ -8,6 +8,7 @@ falls back to public access via requests.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
 
@@ -207,3 +208,24 @@ def _extract_youtube_transcript(url: str) -> str | None:
     except Exception:
         logger.debug(f"No transcript available for {video_id}")
         return None
+
+
+def compute_content_hash(content: str) -> str:
+    """Compute SHA-256 hash of text content."""
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+
+def extract_content_with_hash(
+    resource_url: str,
+    resource_type: str,
+    drive_id: str | None = None,
+) -> tuple[str | None, str | None]:
+    """
+    Extract content and compute its hash.
+
+    Returns (content, content_hash) or (None, None) if extraction fails.
+    """
+    content = extract_content(resource_url, resource_type, drive_id)
+    if not content or len(content.strip()) < 20:
+        return content, None
+    return content, compute_content_hash(content)

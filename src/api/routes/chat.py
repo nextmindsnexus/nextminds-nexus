@@ -3,21 +3,29 @@
 from __future__ import annotations
 
 import logging
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from google.genai.errors import ClientError
 
+from src.api.auth import get_current_user
 from src.api.models import ChatRequest, ChatResponse, ActivityResult
 from src.api.chat_engine import chat, clear_session
+from src.db.operations import log_usage
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["chat"])
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def api_chat(req: ChatRequest):
+async def api_chat(req: ChatRequest, user: Annotated[dict, Depends(get_current_user)]):
     """Send a message to the CTIC Curriculum Assistant."""
+    try:
+        log_usage(str(user["id"]), "chat_message", req.session_id)
+    except Exception:
+        pass  # Don't block chat on usage logging failure
+
     try:
         reply, session_id, activities = chat(
             message=req.message,

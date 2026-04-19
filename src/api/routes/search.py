@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import logging
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from src.api.auth import get_current_user
 from src.embeddings.embedder import embed_text
-from src.db.operations import search_activities
+from src.db.operations import search_activities, log_usage
 from src.api.models import SearchRequest, SearchResponse, ActivityResult
 
 logger = logging.getLogger(__name__)
@@ -15,8 +17,13 @@ router = APIRouter(prefix="/api", tags=["search"])
 
 
 @router.post("/search", response_model=SearchResponse)
-async def api_search(req: SearchRequest):
+async def api_search(req: SearchRequest, user: Annotated[dict, Depends(get_current_user)]):
     """Semantic search over the curriculum catalog."""
+    try:
+        log_usage(str(user["id"]), "search_query")
+    except Exception:
+        pass  # Don't block search on usage logging failure
+
     try:
         query_embedding = embed_text(req.query)
         rows = search_activities(

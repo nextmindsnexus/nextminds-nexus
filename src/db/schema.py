@@ -78,4 +78,59 @@ CREATE TRIGGER activities_updated_at
     BEFORE UPDATE ON activities
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at();
+
+-- Add content_hash column for change detection (idempotent)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'activities' AND column_name = 'content_hash'
+    ) THEN
+        ALTER TABLE activities ADD COLUMN content_hash VARCHAR(64);
+    END IF;
+END $$;
+
+-- ============================================
+-- User profiles: linked to Supabase Auth users
+-- ============================================
+CREATE TABLE IF NOT EXISTS user_profiles (
+    id UUID PRIMARY KEY,                -- matches Supabase auth.users.id
+    email TEXT NOT NULL,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    date_of_birth DATE,
+    role TEXT NOT NULL DEFAULT 'teacher' CHECK (role IN ('teacher', 'admin')),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_profiles_email
+    ON user_profiles (email);
+
+CREATE INDEX IF NOT EXISTS idx_user_profiles_role
+    ON user_profiles (role);
+
+DROP TRIGGER IF EXISTS user_profiles_updated_at ON user_profiles;
+CREATE TRIGGER user_profiles_updated_at
+    BEFORE UPDATE ON user_profiles
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at();
+
+-- ============================================
+-- Usage logs: track chat/search actions per user
+-- ============================================
+CREATE TABLE IF NOT EXISTS usage_logs (
+    id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+    action TEXT NOT NULL CHECK (action IN ('chat_message', 'search_query')),
+    session_id TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_usage_logs_user_id
+    ON usage_logs (user_id);
+
+CREATE INDEX IF NOT EXISTS idx_usage_logs_created_at
+    ON usage_logs (created_at);
 """

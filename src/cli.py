@@ -186,6 +186,57 @@ def cmd_summarize(args):
     run_summarization(limit=limit)
 
 
+def cmd_create_admin(args):
+    """Create an admin user via Supabase Admin API + local profile."""
+    from src.config import SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+
+    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
+        console.print("[red]SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in .env[/red]")
+        return
+
+    from supabase import create_client
+    from src.db.operations import create_user_profile
+
+    sb = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+    console.print(f"Creating admin user: [cyan]{args.email}[/cyan]")
+
+    try:
+        auth_response = sb.auth.admin.create_user(
+            {"email": args.email, "password": args.password, "email_confirm": True}
+        )
+    except Exception as e:
+        console.print(f"[red]Supabase error: {e}[/red]")
+        return
+
+    supabase_user = auth_response.user
+    if not supabase_user:
+        console.print("[red]Failed to create Supabase auth user.[/red]")
+        return
+
+    try:
+        create_user_profile(
+            supabase_id=str(supabase_user.id),
+            email=args.email,
+            first_name=args.first_name,
+            last_name=args.last_name,
+            date_of_birth=None,
+            role="admin",
+        )
+    except Exception as e:
+        console.print(f"[red]Profile creation failed: {e}[/red]")
+        try:
+            sb.auth.admin.delete_user(str(supabase_user.id))
+        except Exception:
+            pass
+        return
+
+    console.print(f"[green]Admin user created successfully![/green]")
+    console.print(f"  ID: {supabase_user.id}")
+    console.print(f"  Email: {args.email}")
+    console.print(f"  Role: admin")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="CTIC Curriculum Engine - Data Pipeline CLI",
@@ -222,6 +273,13 @@ def main():
     summarize_parser = subparsers.add_parser("summarize", help="Summarize unsummarized activities")
     summarize_parser.add_argument("--limit", "-l", type=int, default=None, help="Max activities to summarize")
 
+    # create-admin
+    admin_parser = subparsers.add_parser("create-admin", help="Create an admin user")
+    admin_parser.add_argument("--email", required=True, help="Admin email address")
+    admin_parser.add_argument("--password", required=True, help="Admin password (min 8 chars)")
+    admin_parser.add_argument("--first-name", default="Admin", help="First name")
+    admin_parser.add_argument("--last-name", default="User", help="Last name")
+
     args = parser.parse_args()
     setup_logging(args.verbose)
 
@@ -237,6 +295,7 @@ def main():
         "stats": cmd_stats,
         "init-db": cmd_init_db,
         "summarize": cmd_summarize,
+        "create-admin": cmd_create_admin,
     }
 
     try:

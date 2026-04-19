@@ -323,3 +323,215 @@ def update_health_status(resource_url: str, is_accessible: bool):
             {"url": resource_url, "accessible": is_accessible},
         )
         conn.commit()
+
+
+# ============================================
+# User profile operations
+# ============================================
+
+def create_user_profile(
+    supabase_id: str,
+    email: str,
+    first_name: str,
+    last_name: str,
+    date_of_birth: str | None = None,
+    role: str = "teacher",
+) -> dict:
+    """Create a user profile row linked to a Supabase auth user."""
+    with get_connection() as conn:
+        result = conn.execute(
+            """
+            INSERT INTO user_profiles (id, email, first_name, last_name, date_of_birth, role)
+            VALUES (%(id)s, %(email)s, %(first_name)s, %(last_name)s, %(dob)s, %(role)s)
+            RETURNING id, email, first_name, last_name, date_of_birth, role, is_active, created_at
+            """,
+            {
+                "id": supabase_id,
+                "email": email,
+                "first_name": first_name,
+                "last_name": last_name,
+                "dob": date_of_birth,
+                "role": role,
+            },
+        )
+        row = result.fetchone()
+        columns = [desc.name for desc in result.description]
+        conn.commit()
+    return dict(zip(columns, row))
+
+
+def get_user_profile(supabase_id: str) -> dict | None:
+    """Get a user profile by Supabase user ID."""
+    with get_connection() as conn:
+        result = conn.execute(
+            """
+            SELECT id, email, first_name, last_name, date_of_birth, role, is_active, created_at, updated_at
+            FROM user_profiles
+            WHERE id = %(id)s
+            """,
+            {"id": supabase_id},
+        )
+        row = result.fetchone()
+        if not row:
+            return None
+        columns = [desc.name for desc in result.description]
+    return dict(zip(columns, row))
+
+
+def update_user_profile(supabase_id: str, **fields) -> dict | None:
+    """Update user profile fields (first_name, last_name, date_of_birth)."""
+    allowed = {"first_name", "last_name", "date_of_birth"}
+    updates = {k: v for k, v in fields.items() if k in allowed and v is not None}
+    if not updates:
+        return get_user_profile(supabase_id)
+
+    set_clauses = ", ".join(f"{k} = %({k})s" for k in updates)
+    updates["id"] = supabase_id
+
+    with get_connection() as conn:
+        result = conn.execute(
+            f"""
+            UPDATE user_profiles SET {set_clauses}
+            WHERE id = %(id)s
+            RETURNING id, email, first_name, last_name, date_of_birth, role, is_active, created_at, updated_at
+            """,
+            updates,
+        )
+        row = result.fetchone()
+        if not row:
+            conn.commit()
+            return None
+        columns = [desc.name for desc in result.description]
+        conn.commit()
+    return dict(zip(columns, row))
+
+
+def set_user_role(supabase_id: str, role: str) -> bool:
+    """Change a user's role (teacher/admin)."""
+    with get_connection() as conn:
+        result = conn.execute(
+            """
+            UPDATE user_profiles SET role = %(role)s
+            WHERE id = %(id)s
+            RETURNING id
+            """,
+            {"id": supabase_id, "role": role},
+        )
+        found = result.fetchone() is not None
+        conn.commit()
+    return found
+
+
+def set_user_active(supabase_id: str, is_active: bool) -> bool:
+    """Enable or disable a user account."""
+    with get_connection() as conn:
+        result = conn.execute(
+            """
+            UPDATE user_profiles SET is_active = %(active)s
+            WHERE id = %(id)s
+            RETURNING id
+            """,
+            {"id": supabase_id, "active": is_active},
+        )
+        found = result.fetchone() is not None
+        conn.commit()
+    return found
+
+
+def delete_user_profile(supabase_id: str) -> bool:
+    """Delete a user profile (cascades to usage_logs)."""
+    with get_connection() as conn:
+        result = conn.execute(
+            "DELETE FROM user_profiles WHERE id = %(id)s RETURNING id",
+            {"id": supabase_id},
+        )
+        found = result.fetchone() is not None
+        conn.commit()
+    return found
+
+
+# ============================================
+# Usage logging
+# ============================================
+
+def log_usage(user_id: str, action: str, session_id: str | None = None):
+    """Log a usage event (chat_message or search_query)."""
+    with get_connection() as conn:
+        conn.execute(
+            """
+            INSERT INTO usage_logs (user_id, action, session_id)
+            VALUES (%(user_id)s, %(action)s, %(session_id)s)
+            """,
+            {"user_id": user_id, "action": action, "session_id": session_id},
+        )
+        conn.commit()
+
+
+def get_user_usage_stats(user_id: str) -> dict:
+    """Get usage summary for a single user."""
+    with get_connection() as conn:
+        result = conn.execute(
+            """
+            SELECT
+                COUNT(*) FILTER (WHERE action = 'chat_message') AS chat_count,
+                COUNT(*) FILTER (WHERE action = 'search_query') AS search_count,
+                MAX(created_at) AS last_active
+            FROM usage_logs
+            WHERE user_id = %(user_id)s
+            """,
+            {"user_id": user_id},
+        )
+        row = result.fetchone()
+        columns = [desc.name for desc in result.description]
+    return dict(zip(columns, row))
+
+
+def list_users_with_usage(limit: int = 50, offset: int = 0) -> list[dict]:
+    """List all user profiles with aggregated usage counts."""
+    with get_connection() as conn:
+        result = conn.execute(
+            """
+            SELECT
+                u.id, u.email, u.first_name, u.last_name, u.date_of_birth,
+                u.role, u.is_active, u.created_at, u.updated_at,
+                COALESCE(SUM(CASE WHEN l.action = 'chat_message' THEN 1 ELSE 0 END), 0) AS chat_count,
+                COALESCE(SUM(CASE WHEN l.action = 'search_query' THEN 1 ELSE 0 END), 0) AS search_count,
+                MAX(l.created_at) AS last_active
+            FROM user_profiles u
+            LEFT JOIN usage_logs l ON l.user_id = u.id
+            GROUP BY u.id
+            ORDER BY u.created_at DESC
+            LIMIT %(limit)s OFFSET %(offset)s
+            """,
+            {"limit": limit, "offset": offset},
+        )
+        columns = [desc.name for desc in result.description]
+        return [dict(zip(columns, row)) for row in result.fetchall()]
+
+
+# ============================================
+# Content hash operations
+# ============================================
+
+def get_content_hash(activity_id: str) -> str | None:
+    """Get the stored content hash for an activity."""
+    with get_connection() as conn:
+        result = conn.execute(
+            "SELECT content_hash FROM activities WHERE id = %(id)s",
+            {"id": activity_id},
+        )
+        row = result.fetchone()
+    return row[0] if row else None
+
+
+def update_content_hash(activity_id: str, content_hash: str):
+    """Update the content hash for an activity."""
+    with get_connection() as conn:
+        conn.execute(
+            """
+            UPDATE activities SET content_hash = %(hash)s
+            WHERE id = %(id)s
+            """,
+            {"id": activity_id, "hash": content_hash},
+        )
+        conn.commit()

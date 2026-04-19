@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 
 
 # --- Search ---
@@ -82,3 +82,58 @@ class SummarizeResponse(BaseModel):
     processed: int = 0
     skipped: int = 0
     errors: int = 0
+
+
+# --- Auth ---
+
+class RegisterRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=8, max_length=128)
+    first_name: str = Field(..., min_length=1, max_length=100)
+    last_name: str = Field(..., min_length=1, max_length=100)
+    date_of_birth: str | None = Field(None, pattern=r"^\d{4}-\d{2}-\d{2}$", description="YYYY-MM-DD")
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=1)
+
+
+class ProfileResponse(BaseModel):
+    id: str
+    email: str
+    first_name: str
+    last_name: str
+    date_of_birth: str | None = None
+    role: str
+    is_active: bool
+    chat_count: int = 0
+    search_count: int = 0
+    last_active: str | None = None
+
+
+class ProfileUpdateRequest(BaseModel):
+    first_name: str | None = Field(None, min_length=1, max_length=100)
+    last_name: str | None = Field(None, min_length=1, max_length=100)
+    date_of_birth: str | None = Field(None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+
+
+# --- Admin User Management ---
+
+class AdminCreateUserRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=8, max_length=128)
+    first_name: str = Field(..., min_length=1, max_length=100)
+    last_name: str = Field(..., min_length=1, max_length=100)
+    date_of_birth: str | None = Field(None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    role: str = Field("teacher", pattern=r"^(teacher|admin)$")
+
+
+class AdminUpdateUserRequest(BaseModel):
+    role: str | None = Field(None, pattern=r"^(teacher|admin)$")
+    is_active: bool | None = None
+
+
+class UserListResponse(BaseModel):
+    users: list[ProfileResponse]
+    count: int
