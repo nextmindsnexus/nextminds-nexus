@@ -18,6 +18,7 @@ Run with:
 from __future__ import annotations
 
 import logging
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -58,6 +59,20 @@ app = FastAPI(
     version="0.2.0",
 )
 
+
+def _allowed_origins() -> list[str]:
+    """Resolve CORS origins from env, with safe defaults for local and legacy frontend."""
+    defaults = [
+        "https://nextminds-nexus-frontend.onrender.com",
+        "http://localhost:5173",
+    ]
+    raw = os.getenv("CORS_ALLOW_ORIGINS", "")
+    if not raw.strip():
+        return defaults
+
+    parsed = [origin.strip() for origin in raw.split(",") if origin.strip()]
+    return parsed or defaults
+
 @app.on_event("startup")
 async def startup_event():
     # Schedule the job to run automatically every month (on the 1st at midnight)
@@ -75,10 +90,7 @@ async def shutdown_event():
 # CORS setup for frontend on Render and local dev
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://nextminds-nexus-frontend.onrender.com",
-        "http://localhost:5173",
-    ],
+    allow_origins=_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

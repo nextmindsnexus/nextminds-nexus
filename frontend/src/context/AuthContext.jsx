@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext(null)
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '') || ''
+
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -10,7 +12,7 @@ export function AuthProvider({ children }) {
 
   const fetchProfile = useCallback(async (accessToken) => {
     try {
-      const res = await fetch('/api/auth/me', {
+      const res = await fetch(`${API_BASE}/api/auth/me`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
       if (res.ok) {

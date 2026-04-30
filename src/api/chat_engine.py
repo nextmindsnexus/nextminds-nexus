@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 # In-memory session store (swap for Redis in production)
 _sessions: dict[str, list[types.Content]] = defaultdict(list)
+_session_context: dict[str, dict] = defaultdict(lambda: {'grade_band': None, 'stage': None})
 
 SYSTEM_INSTRUCTION = """You are the NextMinds Curriculum Assistant, helping Connecticut teachers discover \
 invention-based curriculum activities for their classrooms.
@@ -120,6 +121,14 @@ def chat(message: str, session_id: str | None = None) -> tuple[str, str, list[di
 
     client = _get_client()
     history = _sessions[session_id]
+    context = _session_context[session_id]
+
+    # Build context reminder for Gemini if grade_band was previously mentioned
+    context_reminder = ""
+    if context['grade_band']:
+        context_reminder = f"\n[SYSTEM CONTEXT: Teacher previously asked about {context['grade_band']} grade. Use grade_band='{context['grade_band']}' for searches unless they explicitly ask for a different grade.]"
+    
+    system_with_context = SYSTEM_INSTRUCTION + context_reminder
 
     # Add user message
     history.append(types.Content(role="user", parts=[types.Part(text=message)]))
@@ -131,7 +140,7 @@ def chat(message: str, session_id: str | None = None) -> tuple[str, str, list[di
         model="gemini-2.5-flash",
         contents=history,
         config=types.GenerateContentConfig(
-            system_instruction=SYSTEM_INSTRUCTION,
+            system_instruction=system_with_context,
             tools=[SEARCH_TOOL],
             temperature=0.7,
             max_output_tokens=4096,
@@ -158,6 +167,10 @@ def chat(message: str, session_id: str | None = None) -> tuple[str, str, list[di
         for fc_part in function_calls:
             fc = fc_part.function_call
             if fc.name == "search_curriculum":
+                # Track grade_band if this search used it
+                if "grade_band" in fc.args and fc.args["grade_band"]:
+                    context['grade_band'] = fc.args["grade_band"]
+                
                 results = _execute_search(fc.args)
                 all_activities.extend(results)
                 # Build a JSON-serializable response
@@ -191,7 +204,7 @@ def chat(message: str, session_id: str | None = None) -> tuple[str, str, list[di
             model="gemini-2.5-flash",
             contents=history,
             config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_INSTRUCTION,
+                system_instruction=system_with_context,
                 tools=[SEARCH_TOOL],
                 temperature=0.7,
                 max_output_tokens=4096,
@@ -210,7 +223,7 @@ def chat(message: str, session_id: str | None = None) -> tuple[str, str, list[di
 
     return reply, session_id, all_activities
 
-
 def clear_session(session_id: str):
     """Clear conversation history for a session."""
     _sessions.pop(session_id, None)
+    _session_context.pop(session_id, None)

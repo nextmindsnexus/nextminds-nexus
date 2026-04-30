@@ -42,3 +42,6 @@ SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "")
+
+# Comma-separated CORS allow list for API (e.g. https://frontend-xyz.a.run.app,http://localhost:5173)
+CORS_ALLOW_ORIGINS = os.getenv("CORS_ALLOW_ORIGINS", "")

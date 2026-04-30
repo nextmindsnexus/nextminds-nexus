@@ -255,10 +255,31 @@ function ContentTab() {
       {error && <p className="admin-error">{error}</p>}
       {result && (
         <div className="admin-result-card">
-          <h3>Processing Complete</h3>
-          <pre>{JSON.stringify(result, null, 2)}</pre>
+          <div className="admin-result-header">
+            <h3>Processing Complete</h3>
+            <span className={`admin-result-status ${result.status === 'completed' ? 'success' : 'warning'}`}>
+              {result.status || 'unknown'}
+            </span>
+          </div>
+
+          <div className="admin-result-grid">
+            <ResultItem label="Total Crawled" value={result.total_crawled} />
+            <ResultItem label="Added" value={result.added} />
+            <ResultItem label="Updated" value={result.updated} />
+            <ResultItem label="Removed" value={result.removed} />
+            <ResultItem label="Errors" value={result.errors} />
+          </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function ResultItem({ label, value }) {
+  return (
+    <div className="admin-result-item">
+      <span className="admin-result-label">{label}</span>
+      <span className="admin-result-value">{value ?? 0}</span>
     </div>
   )
 }

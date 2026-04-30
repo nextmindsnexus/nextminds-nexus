@@ -1023,6 +1023,76 @@
   margin-top: 1rem;
 }
 
+.admin-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.admin-result-header h3 {
+  margin: 0;
+}
+
+.admin-result-status {
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: lowercase;
+  border: 1px solid var(--border);
+}
+
+.admin-result-status.success {
+  color: #1b5e20;
+  background: #e8f5e9;
+  border-color: #a5d6a7;
+}
+
+.admin-result-status.warning {
+  color: #8a3d00;
+  background: #fff3e0;
+  border-color: #ffcc80;
+}
+
+.admin-result-grid {
+  margin-top: 0.85rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.6rem;
+}
+
+.admin-result-item {
+  background: color-mix(in srgb, var(--panel-bg) 82%, white 18%);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.admin-result-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.admin-result-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--heading);
+}
+
+.admin-result-json {
+  margin-top: 0.8rem;
+}
+
+.admin-result-json summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
 .admin-result-card pre {
   margin: 0.5rem 0 0;
   font-size: 0.85rem;
