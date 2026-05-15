@@ -1,0 +1,44 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    dir: 'frontend'
+    args:
+      - build
+      - '-t'
+      - 'us-central1-docker.pkg.dev/nextminds-nexus-prod/cloud-run-source-deploy/nextminds-nexus/nextminds-nexus-frontend:$COMMIT_SHA'
+      - '--build-arg'
+      - 'VITE_API_BASE_URL=${_VITE_API_BASE_URL}'
+      - '--build-arg'
+      - 'VITE_SUPABASE_URL=${_VITE_SUPABASE_URL}'
+      - '--build-arg'
+      - 'VITE_SUPABASE_ANON_KEY=${_VITE_SUPABASE_ANON_KEY}'
+      - '-f'
+      - 'Dockerfile'
+      - '.'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - push
+      - 'us-central1-docker.pkg.dev/nextminds-nexus-prod/cloud-run-source-deploy/nextminds-nexus/nextminds-nexus-frontend:$COMMIT_SHA'
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: gcloud
+    args:
+      - run
+      - services
+      - update
+      - nextminds-nexus
+      - '--image=us-central1-docker.pkg.dev/nextminds-nexus-prod/cloud-run-source-deploy/nextminds-nexus/nextminds-nexus-frontend:$COMMIT_SHA'
+      - '--region=us-central1'
+      - '--platform=managed'
+      - '--quiet'
+
+images:
+  - 'us-central1-docker.pkg.dev/nextminds-nexus-prod/cloud-run-source-deploy/nextminds-nexus/nextminds-nexus-frontend:$COMMIT_SHA'
+
+substitutions:
+  _VITE_API_BASE_URL: 'https://nextminds-nexus-backend-681453337867.us-central1.run.app'
+  _VITE_SUPABASE_URL: 'https://qhqhqyrkrwhlnoqvowur.supabase.co'
+  _VITE_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFocWhxeXJrcndobG5vcXZvd3VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4NTM2ODIsImV4cCI6MjA4NjQyOTY4Mn0.RdQcACuYzYFGVgia-xMkxkmbBTnImaNEnnBfhkInPpo'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
